@@ -10,11 +10,11 @@ W, H = 4, 3
 # Items: (width, height, count)
 items = [
     (1, 1, 3),  # 3 small squares
-    (2, 1, 4),  # 3 horizontal rectangles
+    (2, 1, 4),  # 5 horizontal rectangles
 ]
 
 reward = 10
-cost = 3
+costs = [5, 3]  # cost for 1x1 is 5, for 2x1 is 3
 penalty = -10
 
 model = pulp.LpProblem("2D_Rectangular_Bin_Packing", pulp.LpMaximize)
@@ -51,12 +51,13 @@ for k, (_, _, count) in enumerate(items):
 filled_value = reward
 empty_value = penalty
 objective = pulp.lpSum([
-    cell_used[i, j] * filled_value + (1 - cell_used[i, j]) * empty_value
+    cell_used[i, j] * reward + (1 - cell_used[i, j]) * penalty
     for i in range(H) for j in range(W)
 ]) - pulp.lpSum([
-    x[k, i, j] * cost
+    x[k, i, j] * costs[k]
     for (k, i, j) in x
 ])
+
 model += objective
 
 # Solve
