@@ -55,12 +55,10 @@ Qbit(int num_qubits = 1) : n(num_qubits), state(1 << n, {0.0, 0.0}) {
         }
 
         double r = dist(gen);
-
         size_t idx = 0;
         while (idx < cumulative.size() && r > cumulative[idx]) ++idx;
         if (idx == cumulative.size()) idx = cumulative.size() - 1;
 
-        // Collapse state to measured basis state
         state.assign(state.size(), {0.0, 0.0});
         state[idx] = {1.0, 0.0};
 
@@ -70,9 +68,10 @@ Qbit(int num_qubits = 1) : n(num_qubits), state(1 << n, {0.0, 0.0}) {
             ket += ((idx >> i) & 1) ? '1' : '0';
         }
         ket += ">";
-
         return ket;
     }
+
+    static int ketToIndex(const string& ket);
 
     // Print full quantum state
     void print_state() const {

@@ -1,6 +1,7 @@
 #pragma once
 #include <complex>
 #include <cmath>
+#include <optional>
 #include "Qbit.h"
 
 using namespace std;
@@ -18,18 +19,25 @@ public:
     }
 
     // Apply this gate to a Qbit and return the transformed Qbit
-    Qbit apply(const Qbit& q, int target = 0) const {
+    Qbit apply(const Qbit& q, optional<int> target = nullopt) const {
         int n = q.num_qubits();
-        int dim = 1 << n;  // 2^n
+        
+        int actual_target = 0;
+        if (target.has_value()) {
+            actual_target = target.value();
+        } else if (n == 1) {
+            actual_target = 0;
+        } else {
+            throw invalid_argument("Target qubit index must be specified for multi-qubit systems.");
+        }
+
+        int dim = 1 << n;
         vector<complex<double>> new_state(dim, {0.0, 0.0});
 
-        const auto& state = q.getState();  // Cache the reference
-
         for (int i = 0; i < dim; ++i) {
-            int bit = (i >> (n - 1 - target)) & 1;
-            int j = i ^ (1 << (n - 1 - target));
-
-            new_state[i] += m[bit][0] * state[i] + m[bit][1] * state[j];
+            int bit = (i >> (n - 1 - actual_target)) & 1;
+            int j = i ^ (1 << (n - 1 - actual_target));
+            new_state[i] += m[bit][0] * q.getState()[i] + m[bit][1] * q.getState()[j];
         }
 
         return Qbit(n, new_state);
