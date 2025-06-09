@@ -18,10 +18,21 @@ public:
     }
 
     // Apply this gate to a Qbit and return the transformed Qbit
-    Qbit apply(const Qbit& q) const {
-        complex<double> new_alpha = m[0][0] * q.alpha + m[0][1] * q.beta;
-        complex<double> new_beta  = m[1][0] * q.alpha + m[1][1] * q.beta;
-        return Qbit(new_alpha, new_beta);
+    Qbit apply(const Qbit& q, int target = 0) const {
+        int n = q.num_qubits();
+        int dim = 1 << n;  // 2^n
+        vector<complex<double>> new_state(dim, {0.0, 0.0});
+
+        const auto& state = q.getState();  // Cache the reference
+
+        for (int i = 0; i < dim; ++i) {
+            int bit = (i >> (n - 1 - target)) & 1;
+            int j = i ^ (1 << (n - 1 - target));
+
+            new_state[i] += m[bit][0] * state[i] + m[bit][1] * state[j];
+        }
+
+        return Qbit(n, new_state);
     }
 
     // Common 1-qubit gates:

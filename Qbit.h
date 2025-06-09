@@ -1,59 +1,90 @@
 #pragma once
 #include <iostream>
+#include <vector>
+#include <complex>
 #include <cmath>
 #include <random>
-#include <complex>
+#include <numeric>  // for accumulate
 
 using namespace std;
 
 class Qbit {
-
 private:
-    // Ensure normalization: |α|² + |β|² = 1
+    int n;  // number of qubits
+    vector<complex<double>> state; // 2^n complex amplitudes
+
     void normalize() {
-        double norma = sqrt(norm(alpha) + norm(beta));
-        if (norma == 0) {
-            alpha = 1.0;
-            beta = 0.0;
+        double norm_sq = 0.0;
+        for (auto& amp : state)
+            norm_sq += norm(amp);
+
+        if (norm_sq == 0.0) {
+            // Reset to |0...0>
+            state.assign(state.size(), {0.0, 0.0});
+            state[0] = {1.0, 0.0};
         } else {
-            alpha /= norma;
-            beta /= norma;
+            double norm_factor = sqrt(norm_sq);
+            for (auto& amp : state)
+                amp /= norm_factor;
         }
     }
 
 public:
-    complex<double> alpha;  // amplitude for |0⟩
-    complex<double> beta;   // amplitude for |1⟩
+Qbit(int num_qubits = 1) : n(num_qubits), state(1 << n, {0.0, 0.0}) {
+    state[0] = {1.0, 0.0}; // set initial amplitude of |0...0> state to 1
+}
 
-    // Constructor to initialise the Quantum state's basis |0> at 1 (and |1> at 0)
-    // This allow for Qbit() or Qbit(z1,z2) instantiation
-    Qbit(complex<double> a = complex<double>(1.0, 0.0),
-         complex<double> b = complex<double>(0.0, 0.0))
-            : alpha(a), beta(b) { normalize(); }
+    Qbit(int num_qubits, const vector<complex<double>>& initial_state)
+        : n(num_qubits), state(initial_state) {
+        if (state.size() != (1 << n)) {
+            throw invalid_argument("Initial state vector size mismatch");
+        }
+        normalize();
+    }
 
-                                         
-
-    // Measure the Qbit (collapse the superposition and return one basis state)
-    int measure() {
-        static thread_local mt19937 gen(random_device{}());
+    // Measure the multi-qubit state, returning the classical bitstring as an integer
+    string measure() {
+        static thread_local std::mt19937 gen(std::random_device{}());
         uniform_real_distribution<double> dist(0.0, 1.0);
 
-        double P0 = std::norm(alpha);
-        double randomValue = dist(gen);
-
-        if (randomValue < P0) {
-            alpha = {1.0, 0.0};
-            beta = {0.0, 0.0};
-            return 0;
-        } else {
-            alpha = {0.0, 0.0};
-            beta = {1.0, 0.0};
-            return 1;
+        // Compute cumulative probabilities
+        vector<double> cumulative(state.size(), 0.0);
+        cumulative[0] = std::norm(state[0]);
+        for (size_t i = 1; i < state.size(); ++i) {
+            cumulative[i] = cumulative[i - 1] + std::norm(state[i]);
         }
+
+        double r = dist(gen);
+
+        size_t idx = 0;
+        while (idx < cumulative.size() && r > cumulative[idx]) ++idx;
+        if (idx == cumulative.size()) idx = cumulative.size() - 1;
+
+        // Collapse state to measured basis state
+        state.assign(state.size(), {0.0, 0.0});
+        state[idx] = {1.0, 0.0};
+
+        // Convert index to ket string
+        string ket = "|";
+        for (int i = n - 1; i >= 0; --i) {
+            ket += ((idx >> i) & 1) ? '1' : '0';
+        }
+        ket += ">";
+
+        return ket;
     }
 
-    // Print quantum state in classical form: a|0⟩ + b|1⟩
-    void getQstate() const {
-        cout << alpha << " |0⟩ + " << beta << " |1⟩" << endl;
+    // Print full quantum state
+    void print_state() const {
+        for (size_t i = 0; i < state.size(); ++i) {
+            if (norm(state[i]) > 1e-10) {
+                cout << "(" << state[i] << ") |" << bitset<16>(i).to_string().substr(16-n) << "⟩ + ";
+            }
+        }
+        cout << "\b\b \n";  // Erase last "+ "
     }
+
+    int num_qubits() const { return n; }
+
+    const vector<complex<double>>& getState() const { return state; }
 };
