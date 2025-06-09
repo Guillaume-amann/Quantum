@@ -1,19 +1,24 @@
-#include <iostream>
-#include <cmath>
-
 #include "Qbit.h"
 #include "Gate.h"
-#include "Circuit.h"
 
 int main() {
-    Qbit q;
-    q.printState(); // Should print |0⟩: 1, |1⟩: 0
+    Qbit q;  // Initialized to |0⟩
+    q.getQstate();
 
-    HadamardGate hadamard; // Create a Hadamard gate
-    hadamard.apply(q); // Apply the gate
-    q.printState(); // Prints the new superposition state
+    Gate h = Gate::H();
+    Qbit q2 = h.apply(q);
+    q2.getQstate();  // Should show superposition (|0> + |1>)/√2
+    int q2_value = q2.measure();
+    cout << q2_value << endl;
 
-    int measurement = q.measure(); // Measure the qubit
-    cout << "Measurement result: " << measurement << endl;
-    q.printState(); // Prints the collapsed state
+    Gate x = Gate::X();
+    Qbit q3 = x.apply(q2);
+    q3.getQstate();  // Bit-flip of q2 state
+
+    // Rotation example:
+    Gate rx = Gate::Rx(M_PI/2);
+    Qbit q4 = rx.apply(q);
+    q4.getQstate();
+
+    return 0;
 }

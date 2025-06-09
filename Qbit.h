@@ -1,46 +1,59 @@
+#pragma once
 #include <iostream>
 #include <cmath>
-#include <vector>
+#include <random>
 #include <complex>
 
 using namespace std;
 
 class Qbit {
-public:
 
-    vector<complex<double>> state; // State vector ( alpha )
-                                                // ( beta  )  a,b belongs to C
-
-    // Constructor to initialise the Quantum state's basis |0> at 1             (and |1> at 0)                                            
-    Qbit() : state({{1.0, 0.0}, 
-                    {0.0, 0.0}}) {}
-
-    // Apply a gate to the qubit
-    void applyGate(const vector<vector<complex<double>>>& gate) {
-        vector<complex<double>> newState(2, {0.0, 0.0});
-        for (size_t i = 0; i < 2; ++i) {
-            for (size_t j = 0; j < 2; ++j) {
-                newState[i] += gate[i][j] * state[j];
-            }
+private:
+    // Ensure normalization: |α|² + |β|² = 1
+    void normalize() {
+        double norma = sqrt(norm(alpha) + norm(beta));
+        if (norma == 0) {
+            alpha = 1.0;
+            beta = 0.0;
+        } else {
+            alpha /= norma;
+            beta /= norma;
         }
-        state = newState;
     }
+
+public:
+    complex<double> alpha;  // amplitude for |0⟩
+    complex<double> beta;   // amplitude for |1⟩
+
+    // Constructor to initialise the Quantum state's basis |0> at 1 (and |1> at 0)
+    // This allow for Qbit() or Qbit(z1,z2) instantiation
+    Qbit(complex<double> a = complex<double>(1.0, 0.0),
+         complex<double> b = complex<double>(0.0, 0.0))
+            : alpha(a), beta(b) { normalize(); }
+
+                                         
 
     // Measure the Qbit (collapse the superposition and return one basis state)
     int measure() {
-        double P0 = norm(state[0]);
-        double P1 = norm(state[1]);
+        static thread_local mt19937 gen(random_device{}());
+        uniform_real_distribution<double> dist(0.0, 1.0);
 
-        double randomValue = static_cast<double>(rand()) / RAND_MAX;
+        double P0 = std::norm(alpha);
+        double randomValue = dist(gen);
 
         if (randomValue < P0) {
-            state = {{1.0, 0.0}, {0.0, 0.0}}; // Collapse to |0⟩
+            alpha = {1.0, 0.0};
+            beta = {0.0, 0.0};
             return 0;
         } else {
-            state = {{0.0, 0.0}, {1.0, 0.0}}; // Collapse to |1⟩
+            alpha = {0.0, 0.0};
+            beta = {1.0, 0.0};
             return 1;
         }
     }
 
-    void getQstate() const {cout << "|0⟩: " << state[0] << ", |1⟩: " << state[1] << endl;}
+    // Print quantum state in classical form: a|0⟩ + b|1⟩
+    void getQstate() const {
+        cout << alpha << " |0⟩ + " << beta << " |1⟩" << endl;
+    }
 };
