@@ -4,22 +4,25 @@
 #include <complex>
 #include <cmath>
 #include <random>
-#include <numeric>  // for accumulate
+#include <bitset>
+#include <stdexcept>
+#include <string>
+#include "Gate.h"
 
 using namespace std;
+using Complex = complex<double>;
 
 class Qbit {
 private:
-    int n;  // number of qubits
-    vector<complex<double>> state; // 2^n complex amplitudes
+    int n;  // Number of qubits
+    vector<complex<double>> state;  // State vector: size = 2^n
 
     void normalize() {
         double norm_sq = 0.0;
-        for (auto& amp : state)
+        for (const auto& amp : state)
             norm_sq += norm(amp);
 
         if (norm_sq == 0.0) {
-            // Reset to |0...0>
             state.assign(state.size(), {0.0, 0.0});
             state[0] = {1.0, 0.0};
         } else {
@@ -30,9 +33,9 @@ private:
     }
 
 public:
-Qbit(int num_qubits = 1) : n(num_qubits), state(1 << n, {0.0, 0.0}) {
-    state[0] = {1.0, 0.0}; // set initial amplitude of |0...0> state to 1
-}
+    Qbit(int num_qubits = 1) : n(num_qubits), state(1 << n, {0.0, 0.0}) {
+        state[0] = {1.0, 0.0};
+    }
 
     Qbit(int num_qubits, const vector<complex<double>>& initial_state)
         : n(num_qubits), state(initial_state) {
@@ -42,16 +45,15 @@ Qbit(int num_qubits = 1) : n(num_qubits), state(1 << n, {0.0, 0.0}) {
         normalize();
     }
 
-    // Measure the multi-qubit state, returning the classical bitstring as an integer
+    // Measure and collapse the state
     string measure() {
-        static thread_local std::mt19937 gen(std::random_device{}());
+        static thread_local mt19937 gen(random_device{}());
         uniform_real_distribution<double> dist(0.0, 1.0);
 
-        // Compute cumulative probabilities
-        vector<double> cumulative(state.size(), 0.0);
-        cumulative[0] = std::norm(state[0]);
+        vector<double> cumulative(state.size());
+        cumulative[0] = norm(state[0]);
         for (size_t i = 1; i < state.size(); ++i) {
-            cumulative[i] = cumulative[i - 1] + std::norm(state[i]);
+            cumulative[i] = cumulative[i - 1] + norm(state[i]);
         }
 
         double r = dist(gen);
@@ -62,28 +64,37 @@ Qbit(int num_qubits = 1) : n(num_qubits), state(1 << n, {0.0, 0.0}) {
         state.assign(state.size(), {0.0, 0.0});
         state[idx] = {1.0, 0.0};
 
-        // Convert index to ket string
-        string ket = "|";
+        string bitstring = "|";
         for (int i = n - 1; i >= 0; --i) {
-            ket += ((idx >> i) & 1) ? '1' : '0';
+            bitstring += ((idx >> i) & 1) ? '1' : '0';
         }
-        ket += ">";
-        return ket;
+        bitstring += ">";
+        return bitstring;
     }
 
-    static int ketToIndex(const string& ket);
+    // Apply a gate to Qbit state
+    void apply(const Gate& g) {
+        if (g.matrix.size() != state.size())
+            throw invalid_argument("Gate dimension does not match Qbit state size");
+        vector<Complex> new_state(state.size(), 0);
+        int dim = state.size();
+        for (int i = 0; i < dim; ++i)
+            for (int j = 0; j < dim; ++j)
+                new_state[i] += g.matrix[i][j] * state[j];
+        state = new_state;
+    }
 
-    // Print full quantum state
     void print_state() const {
         for (size_t i = 0; i < state.size(); ++i) {
             if (norm(state[i]) > 1e-10) {
-                cout << "(" << state[i] << ") |" << bitset<16>(i).to_string().substr(16-n) << "⟩ + ";
+                cout << "(" << state[i] << ") |"
+                     << bitset<64>(i).to_string().substr(64 - n) << "⟩ + ";
             }
         }
-        cout << "\b\b \n";  // Erase last "+ "
+        cout << "\b\b \n";
     }
 
     int num_qubits() const { return n; }
-
-    const vector<complex<double>>& getState() const { return state; }
+    const vector<complex<double>>& get_state() const { return state; }
+    vector<complex<double>>& access_state() { return state; } // allows in-place gate ops
 };

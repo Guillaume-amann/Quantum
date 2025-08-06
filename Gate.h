@@ -1,96 +1,144 @@
 #pragma once
+#include <vector>
 #include <complex>
 #include <cmath>
+#include <stdexcept>
 #include <optional>
-#include "Qbit.h"
 
 using namespace std;
+using Complex = complex<double>;
 
 class Gate {
 public:
-    // 2x2 matrix elements: m[row][col]
-    complex<double> m[2][2];
+    vector<vector<complex<double>>> matrix;
+    int size;  // number of qubits the gate acts on
 
-    // Constructor with matrix elements (row-major)
-    Gate(complex<double> m00, complex<double> m01,
-         complex<double> m10, complex<double> m11) {
-        m[0][0] = m00; m[0][1] = m01;
-        m[1][0] = m10; m[1][1] = m11;
+    Gate(int num_qubits) : size(num_qubits) {
+        int dim = 1 << num_qubits;
+        matrix.resize(dim, vector<complex<double>>(dim, {0.0, 0.0}));
     }
 
-    // Apply this gate to a Qbit and return the transformed Qbit
-    Qbit apply(const Qbit& q, optional<int> target = nullopt) const {
-        int n = q.num_qubits();
-        
-        int actual_target = 0;
-        if (target.has_value()) {
-            actual_target = target.value();
-        } else if (n == 1) {
-            actual_target = 0;
-        } else {
-            throw invalid_argument("Target qubit index must be specified for multi-qubit systems.");
-        }
+    Gate(const vector<vector<complex<double>>>& mat) : matrix(mat) {
+        int dim = mat.size();
+        if ((dim & (dim - 1)) != 0) throw invalid_argument("Matrix size must be a power of 2");
+        size = log2(dim);
+    }
 
+    static Gate identity(int n) {
         int dim = 1 << n;
-        vector<complex<double>> new_state(dim, {0.0, 0.0});
+        Gate g(n);
+        for (int i = 0; i < dim; ++i)
+            g.matrix[i][i] = {1.0, 0.0};
+        return g;
+    }
 
-        for (int i = 0; i < dim; ++i) {
-            int bit = (i >> (n - 1 - actual_target)) & 1;
-            int j = i ^ (1 << (n - 1 - actual_target));
-            new_state[i] += m[bit][0] * q.getState()[i] + m[bit][1] * q.getState()[j];
+    static Gate tensor(const Gate& A, const Gate& B) {
+        int dimA = 1 << A.size;
+        int dimB = 1 << B.size;
+        int dim = dimA * dimB;
+        Gate result(A.size + B.size);
+
+        for (int i = 0; i < dimA; ++i) {
+            for (int j = 0; j < dimA; ++j) {
+                for (int k = 0; k < dimB; ++k) {
+                    for (int l = 0; l < dimB; ++l) {
+                        result.matrix[i * dimB + k][j * dimB + l] = A.matrix[i][j] * B.matrix[k][l];
+                    }
+                }
+            }
         }
-
-        return Qbit(n, new_state);
+        return result;
     }
 
-    // Common 1-qubit gates:
-    static Gate I() {
-        return Gate(complex<double>(1,0), complex<double>(0,0),
-                    complex<double>(0,0), complex<double>(1,0));
-    }
     static Gate X() {
-        return Gate(complex<double>(0,0), complex<double>(1,0),
-                    complex<double>(1,0), complex<double>(0,0));
-    }
-    static Gate Y() {
-        return Gate(complex<double>(0,0), complex<double>(0,-1),
-                    complex<double>(0,1), complex<double>(0,0));
-    }
-    static Gate Z() {
-        return Gate(complex<double>(1,0), complex<double>(0,0),
-                    complex<double>(0,0), complex<double>(-1,0));
-    }
-    static Gate H() {
-        complex<double> invSqrt2 = 1.0 / sqrt(2);
-        return Gate(invSqrt2, invSqrt2,
-                    invSqrt2, -invSqrt2);
-    }
-    static Gate S() {
-        return Gate(complex<double>(1,0), complex<double>(0,0),
-                    complex<double>(0,0), complex<double>(0,1));
-    }
-    static Gate T() {
-        complex<double> exp_i_pi_4 = exp(complex<double>(0, M_PI/4));
-        return Gate(complex<double>(1,0), complex<double>(0,0),
-                    complex<double>(0,0), exp_i_pi_4);
+        return Gate({
+            {0, 1},
+            {1, 0}
+        });
     }
 
-    // Rotation around X,Y,Z axis by angle theta (radians)
+    static Gate Y() {
+        return Gate({
+            {0, {-0, 1}},
+            {{0, -1}, 0}
+        });
+    }
+
+    static Gate Z() {
+        return Gate({
+            {1, 0},
+            {0, -1}
+        });
+    }
+
+    static Gate H() {
+        complex<double> inv_sqrt2 = 1.0 / sqrt(2);
+        return Gate({
+            {inv_sqrt2, inv_sqrt2},
+            {inv_sqrt2, -inv_sqrt2}
+        });
+    }
+
     static Gate Rx(double theta) {
-        complex<double> c = cos(theta/2);
-        complex<double> is = complex<double>(0, -sin(theta/2));
-        return Gate(c, is,
-                    is, c);
+        complex<double> c = cos(theta / 2);
+        complex<double> is = {0, -sin(theta / 2)};
+        return Gate({
+            {c, is},
+            {is, c}
+        });
     }
+
     static Gate Ry(double theta) {
-        double c = cos(theta/2);
-        double s = sin(theta/2);
-        return Gate(c, complex<double>(-s, 0),
-                    complex<double>(s, 0), c);
+        double c = cos(theta / 2);
+        double s = sin(theta / 2);
+        return Gate({
+            {c, -s},
+            {s, c}
+        });
     }
+
     static Gate Rz(double theta) {
-        complex<double> exp_minus = exp(complex<double>(0, -theta/2));
-        complex<double> exp_plus = exp(complex<double>(0, theta/2));
-        return Gate(exp_minus, 0, 0, exp_plus);
+        complex<double> minus = exp(complex<double>(0, -theta / 2));
+        complex<double> plus = exp(complex<double>(0, theta / 2));
+        return Gate({
+            {minus, 0},
+            {0, plus}
+        });
+    }
+
+    // Extend Gate class with static method rotationX acting on target qubit
+    static Gate rotationX(int target, int total_qubits, double theta) {
+        Gate rx = Gate::Rx(theta);
+        return rx.expand(total_qubits, target);
+    }
+
+    // Extend this gate to n qubits, acting on target qubit index
+    Gate expand(int total_qubits, int target) const {
+        if (size != 1) throw invalid_argument("Only single-qubit gates can be expanded");
+
+        Gate result = identity(0);
+        for (int i = 0; i < total_qubits; ++i) {
+            if (i == target)
+                result = tensor(result, *this);
+            else
+                result = tensor(result, identity(1));
+        }
+        return result;
     }
 };
+
+// Matrix multiplication helper for Gate multiplication
+Gate operator*(const Gate& A, const Gate& B) {
+    if (A.matrix.size() != B.matrix.size())
+        throw invalid_argument("Gate size mismatch for multiplication");
+    int dim = A.matrix.size();
+    Gate result(A.size);
+    for (int i = 0; i < dim; ++i)
+        for (int j = 0; j < dim; ++j) {
+            Complex sum = 0;
+            for (int k = 0; k < dim; ++k)
+                sum += A.matrix[i][k] * B.matrix[k][j];
+            result.matrix[i][j] = sum;
+        }
+    return result;
+}
