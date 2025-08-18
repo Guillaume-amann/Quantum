@@ -28,7 +28,7 @@ double compute_energy(const Qbit& q) {
         int b1 = i & 1;
         int z0 = b0 == 0 ? 1 : -1;
         int z1 = b1 == 0 ? 1 : -1;
-        E += std::norm(state[i]) * (5.0 * z0 + 5.0 * z1);
+        E += norm(state[i]) * (0.4 * z0 + 0.4 * z1);
     }
     return E;
 }
@@ -41,9 +41,9 @@ Qbit apply_qaoa(double gamma, double alpha) {
     q.apply(H.expand(2, 0));
     q.apply(H.expand(2, 1));
 
-    // Apply cost unitary: exp(-i * gamma * H_C) = Rz(2 * gamma * 5)
-    q.apply(Gate::Rz(2 * gamma * 5).expand(2, 0));
-    q.apply(Gate::Rz(2 * gamma * 5).expand(2, 1));
+    // Apply cost unitary: exp(-i * gamma * H_C) = Rz(2 * gamma * 1)
+    q.apply(Gate::Rz(2 * gamma * 0.4).expand(2, 0));
+    q.apply(Gate::Rz(2 * gamma * 0.4).expand(2, 1));
 
     // Apply mixer unitary: Rx(2 * alpha)
     q.apply(Gate::Rx(2 * alpha).expand(2, 0));
@@ -62,7 +62,6 @@ int main(int argc, char** argv) {
     double local_best_energy = numeric_limits<double>::max();
     double local_best_gamma = 0.0;
     double local_best_alpha = 0.0;
-
     vector<tuple<double, double, double>> local_data;
 
     for (int gi = rank; gi < STEPS; gi += size) {
@@ -135,7 +134,15 @@ int main(int argc, char** argv) {
 
     // Parallel measurement phase
     Qbit best_q = apply_qaoa(best_gamma, best_alpha);
-    map<string, int> local_hist = {{"00", 0}, {"01", 0}, {"10", 0}, {"11", 0}};
+
+    // const auto& amplitudes = best_q.get_state();
+    // cout << "Probabilities:\n";
+    // for (int i = 0; i < (1 << best_q.num_qubits()); ++i) {
+    //     double p = norm(amplitudes[i]);
+    //     cout << "|" << bitset<2>(i) << ">: " << p << "\n";
+    // }
+
+    map<string, int> local_hist = {{"|00>", 0}, {"|01>", 0}, {"|10>", 0}, {"|11>", 0}};
     int local_samples = SAMPLES / size;
     for (int i = 0; i < local_samples; ++i) {
         string outcome = best_q.measure();
@@ -143,7 +150,7 @@ int main(int argc, char** argv) {
     }
 
     // Collect counts to rank 0
-    map<string, int> global_hist = {{"00", 0}, {"01", 0}, {"10", 0}, {"11", 0}};
+    map<string, int> global_hist = {{"|00>", 0}, {"|01>", 0}, {"|10>", 0}, {"|11>", 0}};
     for (auto& [state, count] : local_hist) {
         int total;
         MPI_Reduce(&count, &total, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -158,7 +165,7 @@ int main(int argc, char** argv) {
         ofstream hist_file("measurement_histogram.csv");
         hist_file << "state,count\n";
         for (const auto& [state, count] : global_hist) {
-            hist_file << "|" << state << ">" << "," << count << "\n";
+            hist_file << state << "," << count << "\n";
         }
         hist_file.close();
     }
