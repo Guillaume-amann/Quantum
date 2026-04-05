@@ -28,7 +28,7 @@ double compute_energy(const Qbit& q) {
         int b1 = i & 1;
         int z0 = b0 == 0 ? 1 : -1;
         int z1 = b1 == 0 ? 1 : -1;
-        E += norm(state[i]) * (0.4 * z0 + 0.4 * z1);
+        E += norm(state[i]) * (0.45 * z0 + 0.15 * z1);
     }
     return E;
 }
@@ -42,8 +42,8 @@ Qbit apply_qaoa(double gamma, double alpha) {
     q.apply(H.expand(2, 1));
 
     // Apply cost unitary: exp(-i * gamma * H_C) = Rz(2 * gamma * 1)
-    q.apply(Gate::Rz(2 * gamma * 0.4).expand(2, 0));
-    q.apply(Gate::Rz(2 * gamma * 0.4).expand(2, 1));
+    q.apply(Gate::Rz(2 * gamma * 0.45).expand(2, 0));
+    q.apply(Gate::Rz(2 * gamma * 0.15).expand(2, 1));
 
     // Apply mixer unitary: Rx(2 * alpha)
     q.apply(Gate::Rx(2 * alpha).expand(2, 0));

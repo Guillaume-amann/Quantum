@@ -7,6 +7,7 @@
 #include <bitset>
 #include <stdexcept>
 #include <string>
+#include <Eigen/Dense>
 #include "Gate.h"
 
 using namespace std;
@@ -74,14 +75,11 @@ public:
 
     // Apply a gate to Qbit state
     void apply(const Gate& g) {
-        if (g.matrix.size() != state.size())
+        if (g.matrix.rows() != (int)state.size())
             throw invalid_argument("Gate dimension does not match Qbit state size");
-        vector<Complex> new_state(state.size(), 0);
-        int dim = state.size();
-        for (int i = 0; i < dim; ++i)
-            for (int j = 0; j < dim; ++j)
-                new_state[i] += g.matrix[i][j] * state[j];
-        state = new_state;
+        Eigen::Map<Eigen::VectorXcd> sv(state.data(), state.size());
+        Eigen::VectorXcd result = g.matrix * sv;
+        sv = result;
     }
 
     void print_state() const {
