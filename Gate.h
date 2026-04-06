@@ -1,8 +1,6 @@
 #pragma once
 #include <vector>
 #include <complex>
-#include <cmath>
-#include <stdexcept>
 #include <Eigen/Dense>
 
 using namespace std;
