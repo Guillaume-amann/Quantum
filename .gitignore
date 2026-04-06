@@ -2,6 +2,9 @@
 /.vscode
 /.QuantumSim.dSYM
 
+Results/energy_surface.csv 
+Results/measurement_histogram.csv
+
 QuantumSim
 Quantum.pdf
 Quantum.docx
