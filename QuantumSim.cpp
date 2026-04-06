@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
 
     // Rank 0 writes energy surface
     if (rank == 0) {
-        ofstream energy_file("energy_surface.csv");
+        ofstream energy_file("Results/energy_surface.csv");
         energy_file << "gamma,alpha,energy\n";
         for (int r = 0; r < size; ++r) {
             if (r == 0) {
@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
         cout << "Best alpha: " << best_alpha << "\n";
         cout << "Minimum energy: " << global_result.energy << "\n";
 
-        ofstream hist_file("measurement_histogram.csv");
+        ofstream hist_file("Results/measurement_histogram.csv");
         hist_file << "state,count\n";
         for (const auto& [state, count] : global_hist) {
             hist_file << state << "," << count << "\n";
