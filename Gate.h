@@ -197,6 +197,15 @@ public:
     // Lift a 2-qubit gate into the full n-qubit register
     // -------------------------------------------------------------------------
 
+    // Embeds a 2-qubit gate G into a full n-qubit register, acting on qubits
+    // ctrl and tgt (0 = most-significant qubit), leaving all others unchanged.
+    //
+    // The resulting 2^n × 2^n matrix satisfies:
+    //   ⟨row| result |col⟩ = G(row_pair, col_pair)   if spectator bits match
+    //                       = 0                        otherwise
+    //
+    // where row_pair / col_pair encode the ctrl and tgt bits as a 2-bit index
+    // in the same ordering that G uses: |ctrl tgt⟩ → ctrl*2 + tgt.
     static Gate expand_two(const Gate& G, int ctrl, int tgt, int total_qubits) {
         if (G.size != 2)
             throw invalid_argument("expand_two(): G must be a 2-qubit gate");
@@ -206,23 +215,31 @@ public:
 
         int n   = total_qubits;
         int dim = 1 << n;
+        // Bit positions of ctrl and tgt within an n-bit integer (MSB = qubit 0).
         int ctrl_shift = n - 1 - ctrl;
         int tgt_shift  = n - 1 - tgt;
         Gate result(n);
 
         for (int row = 0; row < dim; ++row) {
+            // Extract the ctrl and tgt bits from the row basis state and
+            // pack them into the 2-bit index expected by G (ctrl is MSB).
             int row_ctrl = (row >> ctrl_shift) & 1;
             int row_tgt  = (row >> tgt_shift)  & 1;
             int row_pair = row_ctrl * 2 + row_tgt;
 
             for (int col = 0; col < dim; ++col) {
+                // Mask covering every qubit except ctrl and tgt.
+                // If the spectator bits differ between row and col the gate
+                // acts as identity on them, so the matrix element is zero.
                 int other_mask = ~((1 << ctrl_shift) | (1 << tgt_shift));
                 if ((row & other_mask) != (col & other_mask)) continue;
 
+                // Same 2-bit packing for the column basis state.
                 int col_ctrl = (col >> ctrl_shift) & 1;
                 int col_tgt  = (col >> tgt_shift)  & 1;
                 int col_pair = col_ctrl * 2 + col_tgt;
 
+                // Copy the corresponding element of the 2-qubit gate G.
                 result.matrix(row, col) = G.matrix(row_pair, col_pair);
             }
         }
