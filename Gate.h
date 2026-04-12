@@ -209,15 +209,6 @@ public:
         }
         return result;
     }
-
-    Gate operator*(const Gate& other) const {
-        if (matrix.cols() != other.matrix.rows())
-            throw invalid_argument("Gate::operator*: dimension mismatch");
-        Gate result(size);   // size will be wrong for mixed-size products — set it explicitly
-        result.matrix.noalias() = matrix * other.matrix;
-        result.size = size;  // both must be equal after expand()
-        return result;
-    }
     
     static Gate cnot (int ctrl, int tgt, int n) { return expand_two(CNOT(), ctrl, tgt, n); }
     static Gate cz (int ctrl, int tgt, int n) { return expand_two(CZ(), ctrl, tgt, n); }
