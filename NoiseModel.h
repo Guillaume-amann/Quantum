@@ -1,20 +1,20 @@
 #pragma once
 #include <vector>
 #include <complex>
+#include <random>
+#include <Eigen/Dense>
 #include "Gate.h"
 
 using namespace std;
+using namespace Eigen;
 using Complex = complex<double>;
  
 // =============================================================================
-// NoiseModel — factory class for physically motivated Kraus operator sets.
-//
-// Every static method returns a vector<Gate> ready to pass to:
+// NoiseModel — ready to pass to:
 //   DensityMatrix::apply_kraus(NoiseModel::xxx(...))
 //
 // All channels are returned as full 2^n × 2^n operators acting on the
-// target qubit inside an n-qubit register (identity on all other qubits).
-// The caller does NOT need to expand anything.
+// target qubit inside an n-qubit register (identity on all other qubits)
 //
 // Physical background
 // -------------------
@@ -34,31 +34,19 @@ using Complex = complex<double>;
 //   target     — qubit index (0-based, big-endian convention from Gate.h)
 //   n          — total number of qubits in the register
 //
-// Completeness verification
-// -------------------------
-// Every channel below satisfies Σ_k K_k† K_k = I exactly by construction.
-// The algebra is shown in comments for each channel.
 // =============================================================================
  
 class NoiseModel {
 private:
-    // -------------------------------------------------------------------------
-    // Expand a 1-qubit Kraus operator K (2×2) to the full n-qubit space,
-    // acting on `target`, with identity on all other qubits.
-    // Uses Gate::expand() which builds I ⊗ ... ⊗ K ⊗ ... ⊗ I.
-    // -------------------------------------------------------------------------
-    static Gate expand1(const Gate& K, int target, int n) {
-        return K.expand(n, target);
-    }
+    // builds I ⊗ ... ⊗ K ⊗ ... ⊗ I.
+    static Gate expand1(const Gate& K, int target, int n) { return K.expand(n, target); }
  
-    // Convenience: scale a gate by a real factor
     static Gate scale(const Gate& G, double s) {
         Gate out = G;
         out.matrix *= Complex(s, 0.0);
         return out;
     }
 
-    // Convenience: build a single-qubit gate from explicit matrix entries
     static Gate gate2(Complex a, Complex b, Complex c, Complex d) {
         Gate g(1);
         g.matrix(0,0) = a;  g.matrix(0,1) = b;
@@ -158,7 +146,7 @@ public:
     // This is the channel reported in hardware specs as "gate fidelity F = 1 - p".
     // =========================================================================
     static vector<Gate> depolarising(double p, int target, int n) {
-        if (p < 0 || p > 1) throw invalid_argument("depolarising: p must be in [0,1]");
+        if (p < 0 || p > 0.75) throw invalid_argument("depolarising: p must be in [0, 0.75]");
         double s0 = sqrt(1.0 - p);
         double s1 = sqrt(p / 3.0);
         return {
@@ -314,8 +302,7 @@ public:
     static T1T2Channels t1_t2(double T1, double T2, double t_gate, int target, int n) {
         if (T1 <= 0) throw invalid_argument("t1_t2: T1 must be > 0");
         if (T2 <= 0) throw invalid_argument("t1_t2: T2 must be > 0");
-        if (T2 > 2.0 * T1)
-            throw invalid_argument("t1_t2: T2 > 2·T1 violates the physical constraint");
+        if (T2 > 2.0 * T1) throw invalid_argument("t1_t2: T2 > 2·T1 violates the physical constraint");
         if (t_gate < 0) throw invalid_argument("t1_t2: t_gate must be >= 0");
  
         // Amplitude damping (T1 process)
@@ -418,8 +405,9 @@ public:
         double p_01;   // P(report 1 | qubit is |0⟩)
         double p_10;   // P(report 0 | qubit is |1⟩)
  
-        // Apply confusion matrix to a probability vector (full register)
+        // Apply confusion matrix to a probability vector (full register).
         // For a single target qubit: marginalise over all other qubits.
+        // Returns the distorted probability distribution — does NOT collapse ρ.
         vector<double> apply(const vector<double>& probs, int target, int n) const {
             int dim = 1 << n;
             int k_shift = n - 1 - target;
@@ -436,6 +424,27 @@ public:
                 }
             }
             return out;
+        }
+
+        // Apply the confusion matrix then draw a classical outcome.
+        // Returns the reported bit (0 or 1) for the target qubit.
+        // Marginalises over all other qubits before sampling.
+        //
+        // Usage in QuantumSim.cpp:
+        //   auto me = NoiseModel::measurement_error(0.01, 0.02);
+        //   int bit = me.sample(dm.probabilities(), target, n);
+        int sample(const vector<double>& probs, int target, int n) const {
+            vector<double> noisy = apply(probs, target, n);
+
+            // Marginalise over all qubits except target
+            int k_shift = n - 1 - target;
+            double p0 = 0.0;
+            for (int i = 0; i < (int)noisy.size(); ++i)
+                if (((i >> k_shift) & 1) == 0) p0 += noisy[i];
+
+            static thread_local mt19937 gen(random_device{}());
+            uniform_real_distribution<double> dist(0.0, 1.0);
+            return (dist(gen) < p0) ? 0 : 1;
         }
     };
  

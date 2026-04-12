@@ -173,23 +173,35 @@ public:
         return s + "⟩";
     }
 
-    // Displays amplitudes without collapsing — a "cheat view" impossible on real hardware.
-    string print_state() const {
-        vector<double> cumulative(dim);
-        cumulative[0] = rho(0, 0).real();
-        for (int i = 1; i < dim; ++i)
-            cumulative[i] = cumulative[i-1] + rho(i, i).real();
-
-        static thread_local mt19937 gen(random_device{}());
-        uniform_real_distribution<double> dist(0.0, 1.0);
-        double r = dist(gen);
-        int idx = 0;
-        while (idx < dim - 1 && r > cumulative[idx]) ++idx;
-
-        string s = "|";
-        for (int i = n - 1; i >= 0; --i)
-            s += ((idx >> i) & 1) ? '1' : '0';
-        return s + "⟩";
+    // Cheat view: prints all basis states with non-negligible probability AND
+    // the full off-diagonal coherences, neither of which is directly accessible
+    // on real hardware. Useful for debugging entangled / noisy states.
+    void print_state() const {
+        cout << "ρ diagonal (populations):\n";
+        for (int i = 0; i < dim; ++i) {
+            double p = rho(i, i).real();
+            if (p > 1e-10) {
+                cout << "  p(|";
+                for (int b = n - 1; b >= 0; --b) cout << ((i >> b) & 1);
+                cout << "⟩) = " << p << "\n";
+            }
+        }
+        cout << "ρ off-diagonal (coherences):\n";
+        bool any = false;
+        for (int i = 0; i < dim; ++i)
+            for (int j = i + 1; j < dim; ++j) {
+                Complex c = rho(i, j);
+                if (abs(c) > 1e-10) {
+                    cout << "  ρ[" << i << "][" << j << "] = "
+                         << c.real();
+                    if (c.imag() >  1e-10) cout << "+" << c.imag() << "i";
+                    else if (c.imag() < -1e-10) cout << c.imag() << "i";
+                    cout << "  (|c|=" << abs(c) << ")\n";
+                    any = true;
+                }
+            }
+        if (!any) cout << "  none (fully dephased or diagonal state)\n";
+        cout << "  purity = " << purity() << "\n";
     }
 
     // Expectation value of a Hermitian observable O:  <O> = Tr(O ρ)
