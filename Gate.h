@@ -4,36 +4,31 @@
 #include <Eigen/Dense>
 
 using namespace std;
+using namespace Eigen;
 using Complex = complex<double>;
 
 class Gate {
 public:
-    Eigen::MatrixXcd matrix;
+    MatrixXcd matrix;
     int size;  // number of qubits the gate acts on
 
-    explicit Gate(int num_qubits)
-        : matrix(Eigen::MatrixXcd::Zero(1 << num_qubits, 1 << num_qubits)),
-          size(num_qubits) {}
+    explicit Gate(int num_qubits) : matrix(MatrixXcd::Zero(1 << num_qubits, 1 << num_qubits)), size(num_qubits) {}
 
-    Gate(const vector<vector<Complex>>& mat)
-        : matrix(mat.size(), mat.size()), size(0)
-    {
+    Gate(const vector<vector<Complex>>& mat) : matrix(mat.size(), mat.size()), size(0) {
         int d = static_cast<int>(mat.size());
-        if ((d & (d - 1)) != 0)
-            throw invalid_argument("Matrix size must be a power of 2");
+        if ((d & (d - 1)) != 0) throw invalid_argument("Matrix size must be a power of 2");
         size = static_cast<int>(log2(d));
         for (int i = 0; i < d; ++i)
             for (int j = 0; j < d; ++j)
                 matrix(i, j) = mat[i][j];
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // Single-qubit gates
-    // -------------------------------------------------------------------------
 
     static Gate identity(int n) {
         Gate g(n);
-        g.matrix = Eigen::MatrixXcd::Identity(1 << n, 1 << n);
+        g.matrix = MatrixXcd::Identity(1 << n, 1 << n);
         return g;
     }
 
@@ -59,42 +54,35 @@ public:
     }
 
     static Gate H() {
-        double s = 1.0 / sqrt(2.0);
         Gate g(1);
-        g.matrix << s,  s,
-                    s, -s;
+        g.matrix << 1.0 / sqrt(2.0),  1.0 / sqrt(2.0),
+                    1.0 / sqrt(2.0), -1.0 / sqrt(2.0);
         return g;
     }
 
     static Gate Rx(double theta) {
-        Complex c  = cos(theta / 2);
-        Complex is = {0, -sin(theta / 2)};
         Gate g(1);
-        g.matrix << c,  is,
-                    is,  c;
+        g.matrix << cos(theta / 2),  Complex(0, -sin(theta / 2)),
+                    Complex(0, sin(theta / 2)),  cos(theta / 2);
         return g;
     }
 
     static Gate Ry(double theta) {
-        double c = cos(theta / 2), s = sin(theta / 2);
         Gate g(1);
-        g.matrix << c, -s,
-                    s,  c;
+        g.matrix << cos(theta / 2), -sin(theta / 2),
+                    sin(theta / 2),  cos(theta / 2);
         return g;
     }
 
     static Gate Rz(double theta) {
-        Complex m = exp(Complex(0, -theta / 2));
-        Complex p = exp(Complex(0,  theta / 2));
         Gate g(1);
-        g.matrix << m, 0,
-                    0, p;
+        g.matrix << exp(Complex(0, -theta / 2)), 0,
+                    0, exp(Complex(0,  theta / 2));
         return g;
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // Two-qubit gates (4×4, ctrl-first basis: |00⟩ |01⟩ |10⟩ |11⟩)
-    // -------------------------------------------------------------------------
 
     static Gate CNOT() {
         Gate g(2);
@@ -125,20 +113,17 @@ public:
 
     // Rzz(θ) = exp(-i θ/2  Z⊗Z)
     static Gate Rzz(double theta) {
-        Complex m = exp(Complex(0, -theta / 2.0));
-        Complex p = exp(Complex(0,  theta / 2.0));
         Gate g(2);
-        g.matrix(0,0) = m;
-        g.matrix(1,1) = p;
-        g.matrix(2,2) = p;
-        g.matrix(3,3) = m;
+        g.matrix << exp(Complex(0, -theta / 2.0)), 0, 0,  0,
+                    0, exp(Complex(0,  theta / 2.0)), 0,  0,
+                    0, 0, exp(Complex(0,  theta / 2.0)),  0,
+                    0, 0, 0, exp(Complex(0, -theta / 2.0));
         return g;
     }
 
     // Controlled-U: applies single-qubit U to target when control = |1⟩
     static Gate controlled_U(const Gate& U) {
-        if (U.size != 1)
-            throw invalid_argument("controlled_U(): U must be a single-qubit gate");
+        if (U.size != 1) throw invalid_argument("controlled_U(): U must be a single-qubit gate");
         Gate g(2);
         g.matrix(0,0) = 1;
         g.matrix(1,1) = 1;
@@ -147,23 +132,22 @@ public:
         return g;
     }
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // Three-qubit gate
-    // -------------------------------------------------------------------------
-
+    
     // Toffoli (CCX): flips target when both controls are |1⟩
     static Gate Toffoli() {
         Gate g(3);
-        g.matrix = Eigen::MatrixXcd::Identity(8, 8);
+        g.matrix = MatrixXcd::Identity(8, 8);
         g.matrix(6,6) = 0;  g.matrix(6,7) = 1;
         g.matrix(7,7) = 0;  g.matrix(7,6) = 1;
         return g;
     }
 
-    // -------------------------------------------------------------------------
-    // Tensor product:  A ⊗ B
-    // -------------------------------------------------------------------------
+    // =========================================================================
 
+
+    // Tensor product:  A ⊗ B
     static Gate tensor(const Gate& A, const Gate& B) {
         int dimA = 1 << A.size, dimB = 1 << B.size;
         Gate result(A.size + B.size);
@@ -176,13 +160,8 @@ public:
         return result;
     }
 
-    // -------------------------------------------------------------------------
-    // Lift a single-qubit gate into the full n-qubit register
-    // -------------------------------------------------------------------------
-
     Gate expand(int total_qubits, int target) const {
-        if (size != 1)
-            throw invalid_argument("expand(): only single-qubit gates can be expanded");
+        if (size != 1) throw invalid_argument("expand(): only single-qubit gates can be expanded");
         Gate result = identity(0);
         for (int i = 0; i < total_qubits; ++i)
             result = tensor(result, (i == target) ? *this : identity(1));
@@ -193,25 +172,10 @@ public:
         return Rx(theta).expand(total_qubits, target);
     }
 
-    // -------------------------------------------------------------------------
-    // Lift a 2-qubit gate into the full n-qubit register
-    // -------------------------------------------------------------------------
 
-    // Embeds a 2-qubit gate G into a full n-qubit register, acting on qubits
-    // ctrl and tgt (0 = most-significant qubit), leaving all others unchanged.
-    //
-    // The resulting 2^n × 2^n matrix satisfies:
-    //   ⟨row| result |col⟩ = G(row_pair, col_pair)   if spectator bits match
-    //                       = 0                        otherwise
-    //
-    // where row_pair / col_pair encode the ctrl and tgt bits as a 2-bit index
-    // in the same ordering that G uses: |ctrl tgt⟩ → ctrl*2 + tgt.
     static Gate expand_two(const Gate& G, int ctrl, int tgt, int total_qubits) {
-        if (G.size != 2)
-            throw invalid_argument("expand_two(): G must be a 2-qubit gate");
-        if (ctrl == tgt || ctrl < 0 || tgt < 0 ||
-            ctrl >= total_qubits || tgt >= total_qubits)
-            throw invalid_argument("expand_two(): invalid ctrl/tgt indices");
+        if (G.size != 2) throw invalid_argument("expand_two(): G must be a 2-qubit gate");
+        if (ctrl == tgt || ctrl < 0 || tgt < 0 || ctrl >= total_qubits || tgt >= total_qubits) throw invalid_argument("expand_two(): invalid ctrl/tgt indices");
 
         int n   = total_qubits;
         int dim = 1 << n;
@@ -245,12 +209,11 @@ public:
         }
         return result;
     }
-
-    // Convenience wrappers
-    static Gate cnot    (int ctrl, int tgt, int n)             { return expand_two(CNOT(),          ctrl, tgt, n); }
-    static Gate cz      (int ctrl, int tgt, int n)             { return expand_two(CZ(),            ctrl, tgt, n); }
-    static Gate swap    (int q0,   int q1,  int n)             { return expand_two(SWAP(),          q0,   q1,  n); }
-    static Gate rzz     (double t, int q0,  int q1, int n)     { return expand_two(Rzz(t),          q0,   q1,  n); }
+    
+    static Gate cnot (int ctrl, int tgt, int n) { return expand_two(CNOT(), ctrl, tgt, n); }
+    static Gate cz (int ctrl, int tgt, int n) { return expand_two(CZ(), ctrl, tgt, n); }
+    static Gate swap (int q0,   int q1,  int n) { return expand_two(SWAP(), q0, q1, n); }
+    static Gate rzz (double t, int q0,  int q1, int n) { return expand_two(Rzz(t), q0, q1, n); }
     static Gate controlled(const Gate& U, int ctrl, int tgt, int n) { return expand_two(controlled_U(U), ctrl, tgt, n); }
 };
 
