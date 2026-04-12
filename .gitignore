@@ -4,6 +4,7 @@
 
 Results/energy_surface.csv 
 Results/measurement_histogram.csv
+Results/.DS_Store
 
 QuantumSim
 Quantum.pdf
