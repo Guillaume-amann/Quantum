@@ -1,0 +1,29 @@
+=== Noisy electricity-procurement QAOA (density matrix) ===
+Qubits = 8 (rho is 256x256)   operating point (gamma,alpha) = (0.534605,2.868)
+Noise: 1-qubit depolarising p in [0,0.05], 2-qubit 5x, 120 samples on 8 rank(s).
+Classical optimum: |10111000>  cost 265  (Ising E -2.01308)
+
+--- partial_trace: entanglement of qubit 0 with the rest, vs noise ---
+  (pure global state => mixed 1-qubit marginal <=> entangled; noise makes ρ globally mixed)
+  p=0:  global purity=1  fidelity_vs_ideal=1  |  reduced-q0 purity=0.665078  entropy=0.517517 nats
+  p=0.01:  global purity=0.0773923  fidelity_vs_ideal=0.256966  |  reduced-q0 purity=0.570708  entropy=0.62067 nats
+  p=0.05:  global purity=0.00408127  fidelity_vs_ideal=0.00704336  |  reduced-q0 purity=0.501419  entropy=0.691727 nats
+
+--- measurement distribution: noiseless vs p=0.01 ---
+  noiseless: most-likely |10111000> (p=0.0136176)  cost 265  feasible, within budget
+  noisy    : most-likely |10110001> (p=0.00816509)  cost 370  feasible, within budget
+
+--- partial_measurement: qubit-by-qubit readout of the noisy state (p=0.01) ---
+  measured qubit 0 -> 0
+  measured qubit 1 -> 1
+  measured qubit 2 -> 1
+  measured qubit 3 -> 1
+  measured qubit 4 -> 0
+  measured qubit 5 -> 0
+  measured qubit 6 -> 1
+  measured qubit 7 -> 1
+  collapsed outcome |01110011>  cost 540  infeasible, OVER budget
+  measurement_error(0.03) applied to qubit 0 readout -> reported 1 (classical readout confusion on top of ρ)
+
+Wrote Results/electricity_noise_sweep.csv, electricity_noiseless_hist.csv, electricity_noisy_hist.csv
+Timing: noise sweep 175.909 s, demos 26.8776 s, total 202.786 s

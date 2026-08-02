@@ -1,0 +1,60 @@
+=== Electricity procurement QUBO ===
+Qubits |P| = 8   (Hilbert space dim = 256)
+Demand d_t = [2,3,3,3,2,1]   lambda_cov = 3000   [budget C4 ON: B_max = 400, lambda_bud = 0.002]
+Bands (1 MW each, cost in EUR per band):
+  q0 = nuclear @ h0  covers [0,5)  cost 70
+  q1 = nuclear @ h1  covers [1,6)  cost 70
+  q2 = wind @ h0  covers [0,3)  cost 65
+  q3 = wind @ h1  covers [1,4)  cost 65
+  q4 = wind @ h3  covers [3,6)  cost 65
+  q5 = gas @ h0  covers [0,3)  cost 170
+  q6 = gas @ h2  covers [2,5)  cost 170
+  q7 = gas @ h3  covers [3,6)  cost 170
+Ising H_C normalised by scale = 12009.8 (QAOA angle scaling; optimum unchanged)
+  h_i: h0=0.121721  h1=-0.128075  h2=0.246846  h3=0.121948  h4=-0.252746  h5=0.242081  h6=-0.132613  h7=-0.257511  
+  J_ij (dense — every pair coupled via total spend):
+    J(0,1) = 0.5
+    J(0,2) = 0.375073
+    J(0,3) = 0.375073
+    J(0,4) = 0.250175
+    J(0,5) = 0.375685
+    J(0,6) = 0.375685
+    J(0,7) = 0.250787
+    J(1,2) = 0.250175
+    J(1,3) = 0.375073
+    J(1,4) = 0.375073
+    J(1,5) = 0.250787
+    J(1,6) = 0.375685
+    J(1,7) = 0.375685
+    J(2,3) = 0.250148
+    J(2,4) = 0.000351796
+    J(2,5) = 0.375614
+    J(2,6) = 0.125818
+    J(2,7) = 0.000920082
+    J(3,4) = 0.12525
+    J(3,5) = 0.250716
+    J(3,6) = 0.250716
+    J(3,7) = 0.125818
+    J(4,5) = 0.000920082
+    J(4,6) = 0.250716
+    J(4,7) = 0.375614
+    J(5,6) = 0.127304
+    J(5,7) = 0.00240637
+    J(6,7) = 0.252202
+====================================
+Classical brute-force optimum:
+  argmin = |10111000>  Ising E = -2.01308  cost = 265  coverage = [2,3,3,3,2,1]  vs demand [2,3,3,3,2,1]  -> FEASIBLE, within budget
+Running QAOA grid search on 8 rank(s), 1000x1000 (gamma,alpha) grid...
+
+Best gamma: 0.534605
+Best alpha: 2.868
+Minimum <H_C> (normalised units): -1.11729
+QAOA distribution mode (1413/100000 shots):
+  mode        = |10110001>  Ising E = -2.00722  cost = 370  coverage = [2,3,3,3,2,1]  vs demand [2,3,3,3,2,1]  -> FEASIBLE, within budget
+QAOA recommended procurement (cheapest feasible shot, 1350/100000 shots):
+  best shot   = |10111000>  Ising E = -2.01308  cost = 265  coverage = [2,3,3,3,2,1]  vs demand [2,3,3,3,2,1]  -> FEASIBLE, within budget
+  -> matches the classical brute-force optimum.
+Timing summary:
+  Grid search time: 1107.86 s
+  Measurement time: 4.86798 s
+  Total time: 1112.72 s

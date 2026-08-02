@@ -60,10 +60,13 @@ public:
         return g;
     }
 
+    // Rx(θ) = exp(-i θ/2 X) = [[cos(θ/2), -i sin(θ/2)], [-i sin(θ/2), cos(θ/2)]].
+    // Both off-diagonals carry the SAME -i sin(θ/2) (unlike Ry's antisymmetric ±sin);
+    // a +i in the lower-left would make this Hermitian, not unitary, and inflate norms.
     static Gate Rx(double theta) {
         Gate g(1);
-        g.matrix << cos(theta / 2),  Complex(0, -sin(theta / 2)),
-                    Complex(0, sin(theta / 2)),  cos(theta / 2);
+        g.matrix << cos(theta / 2),          Complex(0, -sin(theta / 2)),
+                    Complex(0, -sin(theta / 2)),  cos(theta / 2);
         return g;
     }
 
