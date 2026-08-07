@@ -1,16 +1,57 @@
 # Quantum — a from-scratch gate-model quantum simulator
 
 A small C++ quantum-computing simulator built on [Eigen](https://eigen.tuxfamily.org)
-and MPI, written to support the accompanying paper (`Quantum.pdf`). It takes the
-gate-model approach (not annealing, not cat qubits) and is used to explore QAOA for
-combinatorial optimisation, with a roadmap toward open-system (noisy) simulation and
-an electricity-procurement QUBO.
-à
+and MPI, written to support the accompanying paper (`Quantum.pdf`). 
+Implements the gate model (not annealing, not cat qubits) with a pure state-vector backend (`Qbit`) and a density-matrix backend (`DensityMatrix`) for noise and mixed-state simulation.
+It uses it to explore QAOA for combinatorial optimisation and an electricity-procurement QUBO, with a roadmap toward open-system (noisy) simulation and quantum machine learning (QSVM) for anomaly detection.
+
 The codebase has two simulation back-ends that sit side by side:
 
 - **`Qbit`** — a pure state-vector simulator for the ideal, noise-free case.
 - **`DensityMatrix`** — a density-matrix simulator for mixed states and noise, kept as
   a parallel class rather than a replacement for `Qbit`.
+
+## Features
+
+### Core
+- **Gate library**: 1- and 2-qubit gates (Pauli, Hadamard, rotation families); arbitrary-qubit embedding via `expand_two()`
+- **Pure state simulation** (`Qbit`): state-vector backend, fast ideal-case QAOA
+- **Open-system simulation** (`DensityMatrix`): density-matrix formalism, Kraus-channel noise evolution, partial trace, measurement collapse, entropy/purity/fidelity diagnostics
+- **Noise models**: 9 Kraus channels (bit-flip, phase-flip, depolarising, amplitude damping, T1/T2, two-qubit depolarising, measurement error)
+- **QAOA solver**: depth-1 ansatz, MPI-parallelised grid search over (γ, α), non-destructive sampling
+- **QUBO construction**: closed-form Ising Hamiltonian from band-packing constraints, normalisation, quadratic coupling sparsity
+
+### Applications
+- **Electricity procurement**: 8-qubit bin-packing QUBO, hourly demand coverage, optional budget constraint, feasibility checking
+- **QSVM (prototype)**: quantum feature-map kernel, kernel matrix via circuit fidelity, classical dual QP solver (planned)
+
+### Physics
+- **Big-endian qubit convention** (qubit 0 = MSB) maintained consistently across all files
+- **Hermiticity enforcement** on density matrices post-operation
+- **Completeness verification** on Kraus operator sets (Σ K†K = I)
+- **Physical constraints** validated (T2 ≤ 2·T1, depolarising p ∈ [0,0.75], etc.)
+
+## Key Concepts
+
+### Big-Endian Convention
+Qubit 0 is the most significant bit. For a 3-qubit state |q₀q₁q₂⟩, the index in the state vector is:
+```
+index = q₀·2² + q₁·2¹ + q₂·2⁰
+```
+This convention is enforced across `Gate::expand_two()`, `expand()`, and `DensityMatrix::partial_trace()`.
+
+### Noise Model Design
+Each Kraus channel is a **closed-form factory** in `NoiseModel.h`, decoupled from the simulator back-end. A channel is applied as:
+```cpp
+rho.apply_kraus(NoiseModel::depolarising(p, qubit, n_total));
+```
+The completeness relation Σ K†K = I is verified at call time.
+
+### QAOA Cost Hamiltonian Diagonality
+For classical QUBO problems, H_C contains only Z operators (no X or Y), so it is diagonal in the computational basis and the cost unitary exp(−iγH_C) factors exactly without Trotterisation. Off-diagonal terms (X or Y) would indicate a qualitatively different problem class and would require approximate time evolution.
+
+### QSVM Kernel Geometry
+The quantum advantage in QSVM is **geometric, not computational**: a quantum feature map |φ(x)⟩ can embed data into a richer Hilbert space than classical features allow. The kernel matrix K_Q(xᵢ, xⱼ) = |⟨φ(xⱼ) | φ(xᵢ)⟩|² is computed via circuit fidelity measurements. The dual QP solver and α vector are entirely classical and identical to standard SVM; the quantum component is only the kernel.
 
 ## Repository layout
 
@@ -27,6 +68,73 @@ The codebase has two simulation back-ends that sit side by side:
 | `Results/` | Python plotting scripts; CSV outputs land here (git-ignored). |
 | `Books/` | Reference texts (quantum computing introductions, related papers). |
 | `Quantum.pdf` | The paper this simulator backs (git-ignored). |
+
+to be. restructured as 
+
+```
+quantum-simulator/
+├── README.md
+├── CONTRIBUTING.md               # Dev setup, branch workflow
+├── LICENSE                       # MIT
+├── VERSION                       # 0.0.0
+├── CHANGELOG.md                  # Release history
+├── CMakeLists.txt
+├── .clang-format                 # Code style
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml               # Build + test on push/PR
+│   │   └── clang-format.yml     # Style enforcement
+│   └── PULL_REQUEST_TEMPLATE.md
+├── src/
+│   ├── core/                    # Gate, Qbit, DensityMatrix, NoiseModel
+│   │   ├── Gate.h
+│   │   ├── Qbit.h
+│   │   ├── DensityMatrix.h
+│   │   ├── NoiseModel.h
+│   │   └── CMakeLists.txt
+│   ├── applications/            # QAOA, QSVM
+│   │   ├── QuantumSimQAOA.cpp   # Noiseless 2-qubit sandbox
+│   │   ├── ElectricityQAOA.cpp  # 8-qubit electricity procurement
+│   │   ├── ElectricityNoise.cpp # Noisy version
+│   │   └── CMakeLists.txt
+│   └── CMakeLists.txt
+├── include/
+│   └── quantum_sim/             # Public headers (if building as library)
+│       ├── gate.h
+│       ├── simulator.h
+│       └── noise.h
+├── tests/
+│   ├── CMakeLists.txt
+│   ├── test_gate.cpp            # Unitary verification, tensor products
+│   ├── test_density_matrix.cpp  # Partial trace, Kraus ops, entropy
+│   ├── test_qsvm.cpp            # Kernel matrix, fidelity
+│   └── fixtures/
+│       └── bell_state.h         # Precomputed reference states
+├── examples/
+│   ├── CMakeLists.txt
+│   ├── simple_bell.cpp          # Minimal entanglement demo
+│   ├── qaoa_electricity.cpp     # Link to src/applications
+│   └── README.md                # Usage walkthrough
+├── docs/
+│   ├── ARCHITECTURE.md          # Design, physics background, conventions
+│   ├── FORMULATION.md           # QUBO → Ising mapping (electricity instance)
+│   ├── NOISE_MODELS.md          # Kraus channels, physical interpretation
+│   ├── API.md                   # Class reference (auto-gen friendly)
+│   └── images/
+│       ├── energy_surface.png
+│       └── coupling_graph.svg
+├── scripts/
+│   ├── energy_surface.py        # 3D plot from CSV
+│   ├── measurement_histogram.py # Bar chart
+│   └── requirements.txt         # matplotlib, pandas
+├── benchmarks/
+│   ├── CMakeLists.txt
+│   ├── mpi_scaling.cpp          # Strong scaling on dense coupling
+│   └── density_matrix_vs_qbit.cpp
+├── Results/                     # Generated outputs (in .gitignore)
+│   └── .gitkeep
+└── .gitignore
+```
 
 ## Components
 
@@ -146,13 +254,6 @@ directly comparable — the only change is the back-end and what it can express.
   gates at elevated 2-qubit error accumulate quickly — a realistic caution about deep
   QAOA on noisy hardware.
 
-## Conventions
-
-- **Big-endian qubit ordering** (qubit 0 = most significant bit) is used consistently
-  across `Gate.h`, `Qbit.h`, `DensityMatrix.h`, and `NoiseModel.h`.
-- Noise is expressed in the **Kraus / operator-sum** formalism; unitary evolution is the
-  single-operator special case.
-
 ## Design decisions
 
 - Stay on the **gate model** throughout (not annealing, not cat qubits).
@@ -184,6 +285,16 @@ directly comparable — the only change is the back-end and what it can express.
   measurement on ancillas via `partial_measurement`, correction lookup), reusing the
   infrastructure already in place — a natural next step now that noisy evolution is in.
 
+### v0.1.0 (planned)
+- [ ] QSVM kernel matrix computation (two-qubit feature maps, fidelity circuit)
+- [ ] Classical dual QP solver (SciPy / CVXPY binding)
+- [ ] Anomaly detection pipeline on synthetic billing data
+
+### v0.2.0 (planned)
+- [ ] Variational Quantum Eigensolver (VQE) for Hamiltonian simulation
+- [ ] Quantum Error Correction (QEC) simulation framework
+- [ ] Realistic gate calibration (pulse-level constraints)
+
 ## Building and running
 
 Requires an MPI compiler and Eigen (here, Homebrew's `eigen3`):
@@ -213,3 +324,11 @@ Then plot the outputs:
 python3 Results/energy_surface.py
 python3 Results/measurement_histogram.py
 ```
+
+---
+
+## Physics References
+
+- Kaye, P., Laflamme, R., & Mosca, M. (n.d.). An introduction to quantum computing. Oxford University Press on Demand.
+- Grynberg, G., Aspect, A., & Fabre, C. (1997). Introduction aux lasers et à l’optique quantique. Ellipses Marketing.
+- LaPierre, R. (2021). Introduction to Quantum computing. In The Materials Research Society series. 
