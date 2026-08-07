@@ -1,11 +1,59 @@
-/.DS_Store
-/.vscode
-/.QuantumSim.dSYM
-
-Results/energy_surface.csv 
-Results/measurement_histogram.csv
-Results/.DS_Store
-
-QuantumSim
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
 Quantum.pdf
 Quantum.docx
+
+# CMake
+build/
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+
+# Executables
+*.out
+*.exe
+*.o
+*.a
+*.so
+*.dylib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Generated outputs
+Results/*.csv
+Results/*.png
+Results/*.pdf
+*.log
+
+# Temporary
+*.tmp
+*.bak
+*.backup
+.env.local
+
+# MPI/debug
+core.*
+gmon.out
+GPATH
+GRTAGS
+GSYMS
+GTAGS
