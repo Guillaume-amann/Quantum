@@ -5,8 +5,8 @@
 #include <map>
 #include <limits>
 #include <mpi.h>
-#include "Gate.h"
-#include "Qbit.h"
+#include "src/core/Gate.h"
+#include "src/core/Qbit.h"
 
 using namespace std;
 

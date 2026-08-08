@@ -40,10 +40,10 @@
 #include <string>
 #include <algorithm>
 #include <mpi.h>
-#include "Gate.h"
-#include "Qbit.h"
-#include "DensityMatrix.h"
-#include "NoiseModel.h"
+#include "src/core/Gate.h"
+#include "src/core/Qbit.h"
+#include "src/core/DensityMatrix.h"
+#include "src/core/NoiseModel.h"
 
 using namespace std;
 
