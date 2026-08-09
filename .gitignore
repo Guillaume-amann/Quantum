@@ -5,7 +5,6 @@
 *~
 .DS_Store
 *.sublime-*
-docu/
 
 # Executables and Binaries
 bin/
