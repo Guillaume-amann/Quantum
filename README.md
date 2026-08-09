@@ -13,7 +13,7 @@ The codebase has two simulation back-ends that sit side by side:
 
 ## Features
 
-### Core
+### Core Infrastructure
 - **Gate library**: 1- and 2-qubit gates (Pauli, Hadamard, rotation families); arbitrary-qubit embedding via `expand_two()`
 - **Pure state simulation** (`Qbit`): state-vector backend, fast ideal-case QAOA
 - **Open-system simulation** (`DensityMatrix`): density-matrix formalism, Kraus-channel noise evolution, partial trace, measurement collapse, entropy/purity/fidelity diagnostics
@@ -25,20 +25,17 @@ The codebase has two simulation back-ends that sit side by side:
 - **Electricity procurement**: 8-qubit bin-packing QUBO, hourly demand coverage, optional budget constraint, feasibility checking
 - **QSVM (prototype)**: quantum feature-map kernel, kernel matrix via circuit fidelity, classical dual QP solver (planned)
 
-### Physics
-- **Big-endian qubit convention** (qubit 0 = MSB) maintained consistently across all files
-- **Hermiticity enforcement** on density matrices post-operation
-- **Completeness verification** on Kraus operator sets (Σ K†K = I)
-- **Physical constraints** validated (T2 ≤ 2·T1, depolarising p ∈ [0,0.75], etc.)
-
 ## Key Concepts
 
 ### Big-Endian Convention
-Qubit 0 is the most significant bit. For a 3-qubit state |q₀q₁q₂⟩, the index in the state vector is:
+- **Big-endian qubit convention** Qubit 0 is the most significant bit. For a 3-qubit state |q₀q₁q₂⟩, the index in the state vector is:
 ```
 index = q₀·2² + q₁·2¹ + q₂·2⁰
 ```
 This convention is enforced across `Gate::expand_two()`, `expand()`, and `DensityMatrix::partial_trace()`.
+- **Hermiticity enforcement** on density matrices post-operation
+- **Completeness verification** on Kraus operator sets (Σ K†K = I)
+- **Physical constraints** validated (T2 ≤ 2·T1, depolarising p ∈ [0,0.75], etc.)
 
 ### Noise Model Design
 Each Kraus channel is a **closed-form factory** in `NoiseModel.h`, decoupled from the simulator back-end. A channel is applied as:
@@ -55,84 +52,32 @@ The quantum advantage in QSVM is **geometric, not computational**: a quantum fea
 
 ## Repository layout
 
-| Path | Purpose |
-|------|---------|
-| `Gate.h` | Gate library (single- and two-qubit gates, register embedding). |
-| `Qbit.h` | Pure state-vector simulator. |
-| `DensityMatrix.h` | Density-matrix simulator (mixed states, noise, entropy, fidelity). |
-| `NoiseModel.h` | Factory of Kraus-operator noise channels for `DensityMatrix`. |
-| `QuantumSim.cpp` | MPI QAOA grid-search for a 2-qubit bin-packing QUBO. |
-| `QuantumSim_V1.cpp` | Earlier version of the simulator, kept for reference. |
-| `Electricity_procurement.cpp` | MPI QAOA for the electricity-procurement QUBO (8 qubits, entangling `Rzz`, optional budget). |
-| `Electricity_procurement_noise.cpp` | The same, on `DensityMatrix` with Kraus noise: sweeps the noise level and tracks purity/fidelity/entropy. |
-| `Results/` | Python plotting scripts; CSV outputs land here (git-ignored). |
-| `Books/` | Reference texts (quantum computing introductions, related papers). |
-| `Quantum.pdf` | The paper this simulator backs (git-ignored). |
-
-to be. restructured as 
-
 ```
-quantum-simulator/
+Quantum/
 ├── README.md
 ├── CONTRIBUTING.md               # Dev setup, branch workflow
 ├── LICENSE                       # MIT
 ├── VERSION                       # 0.0.0
 ├── CHANGELOG.md                  # Release history
-├── CMakeLists.txt
-├── .clang-format                 # Code style
-├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml               # Build + test on push/PR
-│   │   └── clang-format.yml     # Style enforcement
-│   └── PULL_REQUEST_TEMPLATE.md
+├── bin/ 
 ├── src/
-│   ├── core/                    # Gate, Qbit, DensityMatrix, NoiseModel
-│   │   ├── Gate.h
-│   │   ├── Qbit.h
-│   │   ├── DensityMatrix.h
-│   │   ├── NoiseModel.h
-│   │   └── CMakeLists.txt
-│   ├── applications/            # QAOA, QSVM
-│   │   ├── QuantumSimQAOA.cpp   # Noiseless 2-qubit sandbox
-│   │   ├── ElectricityQAOA.cpp  # 8-qubit electricity procurement
-│   │   ├── ElectricityNoise.cpp # Noisy version
-│   │   └── CMakeLists.txt
-│   └── CMakeLists.txt
-├── include/
-│   └── quantum_sim/             # Public headers (if building as library)
-│       ├── gate.h
-│       ├── simulator.h
-│       └── noise.h
+│   ├── core/
+│   │   ├── Gate.h                # Gate library (single- and two-qubit gates, register embedding)
+│   │   ├── Qbit.h                # Pure state-vector simulator
+│   │   ├── DensityMatrix.h       # Density-matrix simulator (mixed states, noise, entropy, fidelity)
+│   │   └── NoiseModel.h          # Factory of Kraus-operator noise channels for `DensityMatrix`
+│   ├── results/                  # Generated outputs (in .gitignore)
+│   └── app/
+│       ├── QuantumSim.cpp        # Noiseless 2-qubit sandbox
+│       ├── ElectricityQAOA.cpp   # 8-qubit electricity procurement
+│       └── ElectricityNoise.cpp  # Noisy version
 ├── tests/
-│   ├── CMakeLists.txt
-│   ├── test_gate.cpp            # Unitary verification, tensor products
-│   ├── test_density_matrix.cpp  # Partial trace, Kraus ops, entropy
-│   ├── test_qsvm.cpp            # Kernel matrix, fidelity
-│   └── fixtures/
-│       └── bell_state.h         # Precomputed reference states
-├── examples/
-│   ├── CMakeLists.txt
-│   ├── simple_bell.cpp          # Minimal entanglement demo
-│   ├── qaoa_electricity.cpp     # Link to src/applications
-│   └── README.md                # Usage walkthrough
-├── docs/
-│   ├── ARCHITECTURE.md          # Design, physics background, conventions
-│   ├── FORMULATION.md           # QUBO → Ising mapping (electricity instance)
-│   ├── NOISE_MODELS.md          # Kraus channels, physical interpretation
-│   ├── API.md                   # Class reference (auto-gen friendly)
-│   └── images/
-│       ├── energy_surface.png
-│       └── coupling_graph.svg
-├── scripts/
-│   ├── energy_surface.py        # 3D plot from CSV
-│   ├── measurement_histogram.py # Bar chart
-│   └── requirements.txt         # matplotlib, pandas
-├── benchmarks/
-│   ├── CMakeLists.txt
-│   ├── mpi_scaling.cpp          # Strong scaling on dense coupling
-│   └── density_matrix_vs_qbit.cpp
-├── Results/                     # Generated outputs (in .gitignore)
-│   └── .gitkeep
+│   ├── test_gate.cpp             # Unitary verification, tensor products
+│   └── test_density_matrix.cpp   # Partial trace, Kraus ops, entropy
+├── documentation/
+│   ├── Books/                    # library of physics references
+│   ├── Quantum.pdf
+│   └── Quantum.docx
 └── .gitignore
 ```
 

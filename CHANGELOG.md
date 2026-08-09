@@ -2,23 +2,76 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/),
-and this project adheres to [Semantic Versioning](https://semver.org/).
+---
+
+## [Unreleased] - YYYY-MM-DD
+
+### Added
+Nothing.
+
+### Changed
+Nothing.
+
+### Fixed
+Nothing.
+
+### Deprecated
+Nothing.
+
+### Removed
+Nothing.
 
 ---
 
-## [Unreleased]
+## [0.1.0] - YYYY-MM-DD
 
 ### Added
-- (Nothing yet — upcoming v0.1.0)
+- LICENSE
+- CONTRIBUTING.md
+- CMakeLists.txt
 
 ### Changed
+- Updated README.md
+- Complete restructuring for the following model
+```
+.
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── README.md
+├── bin
+├── documentation
+└── src
+```
 
 ### Fixed
+Nothing.
 
 ### Deprecated
+Nothing.
 
 ### Removed
+Nothing.
+
+---
+
+## [0.0.1] - 2026-08-07
+
+### Added
+- CHANGELOG.md
+
+### Changed
+- Updated gitignore
+- Updated README.md
+
+### Fixed
+Nothing.
+
+### Deprecated
+Nothing.
+
+### Removed
+Nothing.
 
 ---
 
@@ -86,25 +139,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Output: (p, energy, purity, fidelity, entropy, top_cost, top_feasible)
   - Demonstrations: partial_trace (entanglement decay), partial_measurement (qubit-by-qubit readout), measurement_error (classical confusion)
 
-#### Testing & Validation
-- CI/CD pipeline (.github/workflows/ci.yml)
-  - Build matrix: GCC, Clang on Ubuntu
-  - Automated tests on every push/PR
-  - Clang-format enforcement
-
 #### Documentation
 - README.md: Project overview, quick start, performance benchmarks
 - CONTRIBUTING.md: Branch workflow, commit conventions, testing guidelines
 - CHANGELOG.md: This file
-- docs/ARCHITECTURE.md: Design decisions, physics conventions, coupling graph
-- docs/FORMULATION.md: Electricity QUBO derivation, Ising mapping, constraint algebra
-- docs/NOISE_MODELS.md: Kraus operator interpretation, physical parameters
-- docs/API.md: Class reference (auto-generated friendly)
-- examples/README.md: Runnable demos
-
-#### Scripts
-- scripts/energy_surface.py: 3D visualisation of QAOA grid
-- scripts/measurement_histogram.py: Bar chart of sampled outcomes
+- electricity_qubo_formulation.md: Runnable demos
 
 ### Technical Highlights
 
@@ -117,7 +156,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Known Limitations
 
 - Density matrix: O(2^(3n)) memory and time; max ~14 qubits on standard workstation
-- QAOA: Depth 1 only (no adaptive/warm-start angle refinement)
+- QAOA: Depth 1 only yet (no adaptive/warm-start angle refinement)
 - QSVM: Kernel matrix computation untested; dual QP solver not yet integrated
 - Noise simulation: Gate duration not extracted from gate definitions; must pass t_gate manually
 
@@ -125,13 +164,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Annealing (hybrid classical/quantum algorithms)
 - Cat qubits or other platform-specific models
-- GPU acceleration (roadmap for v1.x)
-- Hardware integration (Qiskit/Cirq connectors)
-
----
-
-## Notes
-
-- **v0.0.0** is a **stable baseline**, not yet feature-complete. Core simulation and QAOA are production-ready; QSVM and QEC are prototypes.
-- All code reviewed for mathematical correctness and physics fidelity.
-- Ready for research use; educational clarity prioritised over micro-optimisation.
+- GPU acceleration
