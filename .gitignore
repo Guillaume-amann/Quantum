@@ -5,23 +5,17 @@
 *~
 .DS_Store
 *.sublime-*
-Quantum.pdf
-Quantum.docx
+docu/
 
-# CMake
-build/
-cmake_install.cmake
-CMakeCache.txt
-CMakeFiles/
-Makefile
-
-# Executables
+# Executables and Binaries
+bin/
 *.out
 *.exe
 *.o
 *.a
 *.so
 *.dylib
+*.dSYM/
 
 # Python
 __pycache__/
@@ -38,19 +32,19 @@ env/
 .coverage
 htmlcov/
 
-# Generated outputs
-Results/*.csv
-Results/*.png
-Results/*.pdf
-*.log
+# Generated Outputs
+src/results/*.csv
+src/results/*.png
+src/results/*.pdf
+src/results/*.log
 
-# Temporary
+# Temporary Files
 *.tmp
 *.bak
 *.backup
 .env.local
 
-# MPI/debug
+# Debug and MPI
 core.*
 gmon.out
 GPATH
