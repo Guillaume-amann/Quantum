@@ -1,4 +1,5 @@
 # Quantum — a from-scratch gate-model quantum simulator
+[![Tests](https://github.com/Guillaume-amann/Quantum/actions/workflows/tests.yml/badge.svg)](https://github.com/Guillaume-amann/Quantum/actions/workflows/tests.yml)
 
 A small C++ quantum-computing simulator built on [Eigen](https://eigen.tuxfamily.org)
 and MPI, written to support the accompanying paper (`Quantum.pdf`). 
