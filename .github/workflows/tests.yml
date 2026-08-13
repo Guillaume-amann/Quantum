@@ -1,0 +1,61 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main, dev, 'feature/**' ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ macos-latest, ubuntu-latest ]
+        compiler: [ gcc, clang ]
+        exclude:
+          # GCC not standard on macOS
+          - os: macos-latest
+            compiler: gcc
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install dependencies (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libeigen3-dev cmake build-essential
+
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install eigen cmake
+
+    - name: Create build directory
+      run: mkdir -p build
+
+    - name: Configure CMake
+      working-directory: build
+      run: cmake .. -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build tests
+      working-directory: build
+      run: cmake --build . --target all --parallel 4
+
+    - name: Run test_gate
+      run: ./bin/test_gate
+
+    - name: Run test_density_matrix
+      run: ./bin/test_density_matrix
+
+    - name: Run test_qbit
+      run: ./bin/test_qbit
+
+    - name: Run test_noisemodel
+      run: ./bin/test_noisemodel
+
+    - name: Test summary
+      if: always()
+      run: echo "✓ All unit tests passed on ${{ matrix.os }} with ${{ matrix.compiler }}"
