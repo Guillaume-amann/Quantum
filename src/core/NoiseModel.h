@@ -71,7 +71,13 @@ public:
     //   ρ' = (1-p)ρ + p·XρX†
     // =========================================================================
     static vector<Gate> bit_flip(double p, int target, int n) {
-        if (p < 0 || p > 1) throw invalid_argument("bit_flip: p must be in [0,1]");
+        if (target < 0 || target >= n) {
+            throw invalid_argument("Qubit index " + to_string(target) + 
+                                " out of bounds for " + to_string(n) + 
+                                "-qubit system");
+        }
+        if (p < 0.0 || p > 1.0) throw invalid_argument("Bit-flip probability p must be in [0, 1]");
+        if (p < 0 || p > 1) throw invalid_argument("Bit_flip: p must be in [0,1]");
         return {
             expand1(scale(Gate::identity(1), sqrt(1.0 - p)), target, n),
             expand1(scale(Gate::X(),         sqrt(p)),       target, n)
@@ -98,7 +104,13 @@ public:
     //   → At p=1:   coherence flips sign (not destroyed — this is a pure Z gate).
     // =========================================================================
     static vector<Gate> phase_flip(double p, int target, int n) {
-        if (p < 0 || p > 1) throw invalid_argument("phase_flip: p must be in [0,1]");
+        if (target < 0 || target >= n) {
+            throw invalid_argument("Qubit index " + to_string(target) + 
+                                " out of bounds for " + to_string(n) + 
+                                "-qubit system");
+        }
+        if (p < 0.0 || p > 1.0) throw invalid_argument("Phase-flip probability p must be in [0, 1]");
+        if (p < 0 || p > 1) throw invalid_argument("Phase_flip: p must be in [0,1]");
         return {
             expand1(scale(Gate::identity(1), sqrt(1.0 - p)), target, n),
             expand1(scale(Gate::Z(),         sqrt(p)),       target, n)
@@ -116,7 +128,7 @@ public:
     //   K_1 = √p     · Y
     // =========================================================================
     static vector<Gate> bit_phase_flip(double p, int target, int n) {
-        if (p < 0 || p > 1) throw invalid_argument("bit_phase_flip: p must be in [0,1]");
+        if (p < 0 || p > 1) throw invalid_argument("Bit_phase_flip: p must be in [0,1]");
         return {
             expand1(scale(Gate::identity(1), sqrt(1.0 - p)), target, n),
             expand1(scale(Gate::Y(),         sqrt(p)),       target, n)
@@ -146,7 +158,13 @@ public:
     // This is the channel reported in hardware specs as "gate fidelity F = 1 - p".
     // =========================================================================
     static vector<Gate> depolarising(double p, int target, int n) {
-        if (p < 0 || p > 0.75) throw invalid_argument("depolarising: p must be in [0, 0.75]");
+        if (target < 0 || target >= n) {
+            throw invalid_argument("Qubit index " + to_string(target) + 
+                                " out of bounds for " + to_string(n) + 
+                                "-qubit system");
+        }
+        if (p < 0.0 || p > 1.0) throw invalid_argument("Depolarising: p must be in [0, 1]");
+        if (p < 0 || p > 0.75) throw invalid_argument("Depolarising: p must be in [0, 0.75]");
         double s0 = sqrt(1.0 - p);
         double s1 = sqrt(p / 3.0);
         return {
@@ -185,8 +203,13 @@ public:
     //   ρ[0][1]' = √(1-γ) · ρ[0][1]         (coherence damps)
     // =========================================================================
     static vector<Gate> amplitude_damping(double T1, double t_gate, int target, int n) {
-        if (T1 <= 0) throw invalid_argument("amplitude_damping: T1 must be > 0");
-        if (t_gate < 0) throw invalid_argument("amplitude_damping: t_gate must be >= 0");
+        if (target < 0 || target >= n) {
+            throw invalid_argument("Qubit index " + to_string(target) + 
+                                " out of bounds for " + to_string(n) + 
+                                "-qubit system");
+        }
+        if (T1 <= 0) throw invalid_argument("Amplitude_damping: T1 must be > 0");
+        if (t_gate < 0) throw invalid_argument("Amplitude_damping: t_gate must be >= 0");
  
         double gamma = 1.0 - exp(-t_gate / T1);   // decay probability
  
@@ -233,13 +256,17 @@ public:
     //
     // Steady state: ρ_ss = diag(1-p_eq, p_eq)  — the thermal state.
     // =========================================================================
-    static vector<Gate> generalised_amplitude_damping(
-        double T1, double t_gate, double p_eq, int target, int n)
-    {
-        if (T1 <= 0)           throw invalid_argument("generalised_amplitude_damping: T1 must be > 0");
-        if (t_gate < 0)        throw invalid_argument("generalised_amplitude_damping: t_gate must be >= 0");
+    static vector<Gate> generalised_amplitude_damping(double T1, double t_gate, double p_eq, int target, int n) {
+        if (target < 0 || target >= n) {
+            throw invalid_argument("Qubit index " + to_string(target) + 
+                                " out of bounds for " + to_string(n) + 
+                                "-qubit system");
+        }
+        if (p_eq < 0.0 || p_eq > 1.0) throw invalid_argument("Generalised amplitude damping probability p_eq must be in [0, 1]");
+        if (T1 <= 0)           throw invalid_argument("Generalised_amplitude_damping: T1 must be > 0");
+        if (t_gate < 0)        throw invalid_argument("Generalised_amplitude_damping: t_gate must be >= 0");
         if (p_eq < 0 || p_eq > 0.5)
-            throw invalid_argument("generalised_amplitude_damping: p_eq must be in [0, 0.5]");
+            throw invalid_argument("Generalised_amplitude_damping: p_eq must be in [0, 0.5]");
  
         double gamma  = 1.0 - exp(-t_gate / T1);
         double s0 = sqrt(1.0 - p_eq);
@@ -300,10 +327,10 @@ public:
     };
  
     static T1T2Channels t1_t2(double T1, double T2, double t_gate, int target, int n) {
-        if (T1 <= 0) throw invalid_argument("t1_t2: T1 must be > 0");
-        if (T2 <= 0) throw invalid_argument("t1_t2: T2 must be > 0");
-        if (T2 > 2.0 * T1) throw invalid_argument("t1_t2: T2 > 2·T1 violates the physical constraint");
-        if (t_gate < 0) throw invalid_argument("t1_t2: t_gate must be >= 0");
+        if (T1 <= 0) throw invalid_argument("T1T2Channels::t1_t2: T1 must be > 0");
+        if (T2 <= 0) throw invalid_argument("T1T2Channels::t1_t2: T2 must be > 0");
+        if (T2 > 2.0 * T1) throw invalid_argument("T1T2Channels::t1_t2: T2 > 2·T1 violates the physical constraint");
+        if (t_gate < 0) throw invalid_argument("T1T2Channels::t1_t2: t_gate must be >= 0");
  
         // Amplitude damping (T1 process)
         auto ad_ops = amplitude_damping(T1, t_gate, target, n);
@@ -350,8 +377,19 @@ public:
     // the 4-dimensional subspace of the n-qubit register.
     // =========================================================================
     static vector<Gate> depolarising_2q(double p, int q0, int q1, int n) {
-        if (p < 0 || p > 1) throw invalid_argument("depolarising_2q: p must be in [0,1]");
-        if (q0 == q1) throw invalid_argument("depolarising_2q: q0 and q1 must differ");
+        if (q0 < 0 || q0 >= n) {
+            throw invalid_argument("Qubit index " + to_string(q0) + 
+                                " out of bounds for " + to_string(n) + 
+                                "-qubit system");
+        }
+        if (q1 < 0 || q1 >= n) {
+            throw invalid_argument("Qubit index " + to_string(q1) + 
+                                " out of bounds for " + to_string(n) + 
+                                "-qubit system");
+        }
+        if (p < 0.0 || p > 1.0) throw invalid_argument("Depolarising_2q: p must be in [0, 1]");
+        if (p < 0 || p > 1) throw invalid_argument("Depolarising_2q: p must be in [0,1]");
+        if (q0 == q1) throw invalid_argument("Depolarising_2q: q0 and q1 must differ");
  
         vector<Gate> paulis_1q = {
             Gate::identity(1), Gate::X(), Gate::Y(), Gate::Z()
